@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { User, Task, TaskMember, Friend, Achievement, UserAchievement, Activity } from '../shared/schema';
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase credentials. Please add SUPABASE_URL and SUPABASE_ANON_KEY to your secrets.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -13,6 +20,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 export async function initializeDatabase() {
+  console.log('Initializing Supabase with URL:', supabaseUrl);
+  
   // Check if tables exist, if not create them
   const { error: usersError } = await supabase
     .from('users')
@@ -20,10 +29,16 @@ export async function initializeDatabase() {
     .limit(1);
   
   if (usersError) {
-    console.log('Creating tables...');
+    console.log('Creating tables... Error:', usersError);
     await createTables();
   } else {
-    console.log('Database tables already exist');
+    console.log('Database tables exist, checking connection...');
+    const { data, error } = await supabase.from('users').select('count').single();
+    if (error) {
+      console.error('Database connection error:', error);
+    } else {
+      console.log('Database connected successfully');
+    }
   }
 }
 

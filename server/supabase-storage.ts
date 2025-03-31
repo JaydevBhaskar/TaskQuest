@@ -28,12 +28,12 @@ export class SupabaseStorage implements IStorage {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .ilike('username', username)
-      .single();
+      .eq('username', username)
+      .maybeSingle();
     
-    if (error) {
+      if (error && error.code !== 'PGRST116') {
       console.error("Error fetching user by username:", error);
-      return undefined;
+      throw new Error(`Database error: ${error.message}`);
     }
     
     return data as User;
