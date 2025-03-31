@@ -1,9 +1,12 @@
-// This is a placeholder for future Supabase integration.
-// Currently, we're using in-memory storage as per the guidelines,
-// but the code will be structured to make migration to Supabase easy.
-
+import { createClient } from '@supabase/supabase-js';
 import { User, Task, Friend } from "@shared/schema";
 import { apiRequest } from "./queryClient";
+
+// Initialize Supabase client for the frontend
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // User related functions
 export const getUser = async (id: number): Promise<User> => {
