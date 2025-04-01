@@ -96,6 +96,9 @@ export const insertTaskSchema = createInsertSchema(tasks)
     xp_reward: true,
     is_group_task: true,
     owner_id: true,
+  })
+  .extend({
+    due_date: z.string().datetime().nullable().optional().transform(val => val ? new Date(val) : null),
   });
 
 export const insertTaskMemberSchema = createInsertSchema(taskMembers)

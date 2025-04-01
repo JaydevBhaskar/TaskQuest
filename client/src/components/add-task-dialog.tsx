@@ -54,31 +54,48 @@ export default function AddTaskDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [points, setPoints] = useState(editTask?.xp_reward || 30);
-  
+
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: editTask?.title || "",
       description: editTask?.description || "",
-      due_date: editTask?.due_date 
-        ? new Date(editTask.due_date).toISOString().split('T')[0] 
+      due_date: editTask?.due_date
+        ? new Date(editTask.due_date).toISOString().split("T")[0]
         : "",
-      due_time: editTask?.due_date 
-        ? new Date(editTask.due_date).toTimeString().split(' ')[0].slice(0, 5) 
+      due_time: editTask?.due_date
+        ? new Date(editTask.due_date).toTimeString().split(" ")[0].slice(0, 5)
         : "",
       xp_reward: editTask?.xp_reward || 30,
       is_group_task: editTask?.is_group_task || false,
     },
   });
-  
+
   const createTaskMutation = useMutation({
     mutationFn: async (values: TaskFormValues) => {
       // Combine date and time
       let dueDate = null;
       if (values.due_date) {
-        dueDate = new Date(`${values.due_date}T${values.due_time || '00:00'}`);
+        try {
+          const time = values.due_time || "00:00";
+          const [hours, minutes] = time.split(':').map(Number);
+          
+          // Parse date components
+          const [year, month, day] = values.due_date.split('-').map(Number);
+          
+          // Create date object with UTC to avoid timezone issues
+          const date = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+
+          if (isNaN(date.getTime())) {
+            throw new Error("Invalid date format");
+          }
+
+          dueDate = date.toISOString();
+        } catch (err) {
+          throw new Error("Invalid date format");
+        }
       }
-      
+
       const taskData = {
         title: values.title,
         description: values.description,
@@ -86,21 +103,25 @@ export default function AddTaskDialog({
         xp_reward: values.xp_reward,
         is_group_task: values.is_group_task,
       };
-      
+
       if (editTask) {
-        const res = await apiRequest('PATCH', `/api/tasks/${editTask.id}`, taskData);
+        const res = await apiRequest(
+          "PATCH",
+          `/api/tasks/${editTask.id}`,
+          taskData,
+        );
         return res.json();
       } else {
-        const res = await apiRequest('POST', '/api/tasks', taskData);
+        const res = await apiRequest("POST", "/api/tasks", taskData);
         return res.json();
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/user'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/group'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks/group"] });
       toast({
         title: editTask ? "Task updated" : "Task created",
-        description: editTask 
+        description: editTask
           ? "Your task has been updated successfully"
           : "Your new task has been created",
       });
@@ -110,23 +131,23 @@ export default function AddTaskDialog({
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to ${editTask ? 'update' : 'create'} task: ${error}`,
+        description: `Failed to ${editTask ? "update" : "create"} task: ${error}`,
         variant: "destructive",
       });
     },
   });
-  
+
   const onSubmit = (values: TaskFormValues) => {
     createTaskMutation.mutate(values);
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editTask ? "Edit Task" : "Add New Task"}</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -136,17 +157,17 @@ export default function AddTaskDialog({
                 <FormItem>
                   <FormLabel>Task Title</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Enter task title" 
-                      className="bg-zinc-800 border-zinc-700" 
-                      {...field} 
+                    <Input
+                      placeholder="Enter task title"
+                      className="bg-zinc-800 border-zinc-700"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -154,17 +175,17 @@ export default function AddTaskDialog({
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Enter task description" 
-                      className="bg-zinc-800 border-zinc-700" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Enter task description"
+                      className="bg-zinc-800 border-zinc-700"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -173,17 +194,17 @@ export default function AddTaskDialog({
                   <FormItem>
                     <FormLabel>Due Date</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="date" 
-                        className="bg-zinc-800 border-zinc-700" 
-                        {...field} 
+                      <Input
+                        type="date"
+                        className="bg-zinc-800 border-zinc-700"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="due_time"
@@ -191,10 +212,10 @@ export default function AddTaskDialog({
                   <FormItem>
                     <FormLabel>Due Time</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="time" 
-                        className="bg-zinc-800 border-zinc-700" 
-                        {...field} 
+                      <Input
+                        type="time"
+                        className="bg-zinc-800 border-zinc-700"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -202,7 +223,7 @@ export default function AddTaskDialog({
                 )}
               />
             </div>
-            
+
             <FormField
               control={form.control}
               name="xp_reward"
@@ -232,7 +253,7 @@ export default function AddTaskDialog({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="is_group_task"
@@ -242,7 +263,9 @@ export default function AddTaskDialog({
                   <FormControl>
                     <RadioGroup
                       className="flex space-x-4"
-                      onValueChange={(value) => field.onChange(value === "group")}
+                      onValueChange={(value) =>
+                        field.onChange(value === "group")
+                      }
                       value={field.value ? "group" : "personal"}
                     >
                       <div className="flex items-center space-x-2">
@@ -259,7 +282,7 @@ export default function AddTaskDialog({
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
@@ -268,12 +291,16 @@ export default function AddTaskDialog({
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="bg-[#1DB954] hover:bg-[#1DB954]/90 text-white"
                 disabled={createTaskMutation.isPending}
               >
-                {createTaskMutation.isPending ? "Saving..." : editTask ? "Update Task" : "Create Task"}
+                {createTaskMutation.isPending
+                  ? "Saving..."
+                  : editTask
+                    ? "Update Task"
+                    : "Create Task"}
               </Button>
             </DialogFooter>
           </form>

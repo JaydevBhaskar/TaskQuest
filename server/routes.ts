@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { supabase } from "./supabase";
 import {
   insertUserSchema,
   insertTaskSchema,
@@ -14,7 +15,6 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
 import MemoryStore from "memorystore";
-import { supabase } from "./supabase";
 
 // Utility function to handle zod errors
 function formatZodError(error: ZodError) {
@@ -579,21 +579,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requestId = parseInt(req.params.id);
         const user = req.user as any;
 
-        const request = await storage.getFriends(requestId);
+        // Use filter to find the specific friend request by ID
+        const requests = await storage.getFriendRequests(user.id);
+        const request = requests.find(req => req.id === requestId);
+        
         if (!request) {
           return res.status(404).json({ message: "Friend request not found" });
         }
 
         // Check if user is the recipient
-          if (request[0].friend_id !== user.id) { // Access the first element of the array
-            return res.status(403).json({ message: "Forbidden" });
+        if (request.friend_id !== user.id) {
+          return res.status(403).json({ message: "Forbidden" });
         }
 
         // Check if already accepted or rejected
-        if (request[0].status !== "pending") {
+        if (request.status !== "pending") {
           return res
             .status(400)
-            .json({ message: `Request already ${request[0].status}` });
+            .json({ message: `Request already ${request.status}` });
         }
 
         const updatedRequest = await storage.updateFriendStatus(
@@ -616,21 +619,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const requestId = parseInt(req.params.id);
         const user = req.user as any;
 
-        const request = await storage.getFriends(requestId);
+        // Use filter to find the specific friend request by ID
+        const requests = await storage.getFriendRequests(user.id);
+        const request = requests.find(req => req.id === requestId);
+        
         if (!request) {
           return res.status(404).json({ message: "Friend request not found" });
         }
 
         // Check if user is the recipient
-        if (request[0].friend_id !== user.id) {
+        if (request.friend_id !== user.id) {
           return res.status(403).json({ message: "Forbidden" });
         }
 
         // Check if already accepted or rejected
-        if (request[0].status !== "pending") {
+        if (request.status !== "pending") {
           return res
             .status(400)
-            .json({ message: `Request already ${request[0].status}` });
+            .json({ message: `Request already ${request.status}` });
         }
 
         const updatedRequest = await storage.updateFriendStatus(
